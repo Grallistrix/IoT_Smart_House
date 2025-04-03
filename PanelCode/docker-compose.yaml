@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  redis:
+    image: redis:latest
+    container_name: redis_db
+    restart: always
+    command: ["redis-server", "/etc/redis/redis.conf"]
+    volumes:
+      - ./volume:/data
+      - ./redis.conf:/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    container_name: redis_controller
+    restart: always
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    environment:
+      - REDIS_HOST=redis
