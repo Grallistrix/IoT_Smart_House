@@ -5,6 +5,9 @@ SERVICE=hello-world
 run: down
 	docker-compose up
 
+go: purge
+	docker-compose up
+
 # Zatrzymanie i usunięcie kontenera
 down:
 	docker-compose down
