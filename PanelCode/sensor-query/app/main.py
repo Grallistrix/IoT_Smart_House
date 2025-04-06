@@ -47,6 +47,7 @@ async def fetch_all_stats():
                         "ip": ip,
                         "error": str(e)
                     }
+        # print(sensor_data)
         await asyncio.sleep(FETCH_INTERVAL)
         
         

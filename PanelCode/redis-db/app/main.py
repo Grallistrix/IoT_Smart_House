@@ -1,3 +1,5 @@
+import datetime
+import json
 from fastapi import FastAPI, HTTPException
 from redis_manager import RedisManager
 from pydantic import BaseModel
@@ -5,11 +7,6 @@ from typing import List
 
 app = FastAPI()
 db = RedisManager()
-
-class ElectricityData(BaseModel):
-    date: str
-    time: str
-    price_per_hour: float
 
 class SensorData(BaseModel):
     sensor_number: int
@@ -29,14 +26,13 @@ class SensorDataResponse(BaseModel):
     Time: str
     TemperatureValue: str
     HumidityValue: str
+    
+class ElectricityData(BaseModel):
+    FIRMA: str
+    TARYFA: str
+    PRAD: str
+    SUMA: str
 
-@app.post("/add_electricity_data")
-async def add_electricity_usage(data: ElectricityData):
-    try:
-        db.add_electricity_usage(data.date, data.time, data.price_per_hour)
-        return {"message": "Electricity usage data added successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/add_sensor_data")
 async def add_sensor_data(data: SensorData):
@@ -75,3 +71,27 @@ async def get_last_sensor_data(sensor_number: int, num_values: int):
         raise HTTPException(status_code=404, detail="No sensor data found")
     return data
 
+@app.post("/electricity")
+async def store_data(data: ElectricityData):
+    try:
+        current_time = datetime.now().strftime("%d:%m:%Y-%H:%M")
+
+        key = f"{data.FIRMA}_{current_time}"
+
+        json_data = json.dumps(data.dict())
+
+        db.set(key, json_data)
+
+        return {"message": f"Dane zapisane w Redisie pod kluczem {key}"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Problem z zapisem danych: {e}")
+    
+    
+@app.post("/add_electricity_data")
+async def add_electricity_usage(data: ElectricityData):
+    try:
+        db.add_electricity_usage(data.date, data.time, data.price_per_hour)
+        return {"message": "Electricity usage data added successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

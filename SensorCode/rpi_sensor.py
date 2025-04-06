@@ -14,15 +14,15 @@ Connection: close
 """
 
 # Wi-Fi credentials
-SSID = 'Test'
-PASSWORD = 'Test'
+SSID = 'YOUR_SSID'
+PASSWORD = 'YOUR_PASSWD'
 
 # DHT sensor setup - Reading from Pin 22
 dht_sensor = dht.DHT11(Pin(22))
 led = Pin("LED", Pin.OUT)
 vent = Pin(18, Pin.OUT)
-TEMP_CORRECTION = -5
-HUMID_COEFF = 0.5
+TEMP_CORRECTION = 0
+HUMID_COEFF = 0.95
 temperature = None 
 humidity = None
 
@@ -52,8 +52,13 @@ def read_sensor(timer):
 temp_timer = Timer()
 temp_timer.init(period=5000, mode=Timer.PERIODIC, callback=read_sensor)
 
-connect()
 led.value(0)
+time.sleep(2)
+
+
+connect()
+led.value(1)
+
 
 # Start server with proper socket cleanup
 addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]

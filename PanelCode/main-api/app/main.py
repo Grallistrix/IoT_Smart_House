@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException
-from redis_manager import RedisManager
 from pydantic import BaseModel
 from typing import List
+from fastapi.responses import Response
 
-app = FastAPI()
+
+
 
 class ElectricityData(BaseModel):
     date: str
@@ -30,6 +31,14 @@ class SensorDataResponse(BaseModel):
     HumidityValue: str
     
     
+app = FastAPI()
+   
+   
+@app.get("/test", status_code=204)
+def test_endpoint():
+    return Response(status_code=204)
+
+''' 
 @app.post("/add_electricity_data")
 async def add_electricity_usage(data: ElectricityData):
 
@@ -45,8 +54,6 @@ async def get_electricity_usage(date: str, time: str):
 @app.get("/get_sensor_data/{sensor_number}/{date}/{time}", response_model=SensorDataResponse)
 async def get_sensor_data(sensor_number: int, date: str, time: str):
 
-
-
 @app.get("/get_last_electricity_usage/{num_values}", response_model=List[ElectricityUsageResponse])
 async def get_last_electricity_usage(num_values: int):
 
@@ -54,3 +61,4 @@ async def get_last_electricity_usage(num_values: int):
 @app.get("/get_last_sensor_data/{sensor_number}/{num_values}", response_model=List[SensorDataResponse])
 async def get_last_sensor_data(sensor_number: int, num_values: int):
 
+'''

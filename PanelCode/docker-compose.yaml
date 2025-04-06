@@ -1,5 +1,11 @@
 version: "3.8"
 
+# 6379 redis
+# 8000 redis-controller
+# 8001 sensor-query
+# 8002 main-api
+# 8003 web-scrapper
+
 services:
   redis:
     image: redis:latest
@@ -28,8 +34,30 @@ services:
     container_name: sensor_query
     restart: always
     ports:
-      - "8002:8002"
+      - "8001:8001"
     volumes:
       - ./sensor-query/app:/app/app
     depends_on:
-      - redis
+      - redis_controller
+
+  main-api:
+    build: ./main-api
+    container_name: main-api
+    restart: always
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./main-api/app:/app/app
+    depends_on:
+      - redis_controller
+
+  web_scraper:
+    build: ./web-scrapper
+    container_name: web_scraper
+    restart: always
+    ports:
+      - "8003:8003"
+    depends_on:
+      - redis_controller
+    environment:
+      - REDIS_CONTROLLER_URL=http://redis-controller:8000/electricity
