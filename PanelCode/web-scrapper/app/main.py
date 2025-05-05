@@ -11,15 +11,16 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from contextlib import asynccontextmanager
 
+import json
+from datetime import datetime
 
 
-
-# Tworzymy instancję FastAPI
+# Tworzymy instancję FastAPI oraz schedulujemy cronjob do sprawdzania danych
 @asynccontextmanager
 async def lifespan(_:FastAPI):
     print('Webscrapper uruchomiony!')
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(id="job1",func=testing,trigger=CronTrigger(second=0))
+    scheduler.add_job(id="job1",func=scrap_and_send,trigger=CronTrigger(second=0))
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
@@ -28,19 +29,6 @@ async def lifespan(_:FastAPI):
 app = FastAPI(lifespan=lifespan,title="WebScrapper")
 grouped_data = {} 
         
-# Funkcja do scrapowania danych================================================================================================================================
-@app.get("/scrap_data")
-async def scrap_and_send():
-    try:
-        # Scrapowanie danych
-        dane = await scrap_data()
-
-        for line in dane:
-            sent_to_controller(line)
-
-        return {"Dane": dane}
-    except Exception as e:
-        return {"error": f"Wystąpił błąd: {e}"}
 
 async def scrap_data():
     grouped_data={}
@@ -84,26 +72,27 @@ async def scrap_data():
         raise RuntimeError(f"Błąd podczas pobierania strony: {e}")
     except Exception as e:
         raise RuntimeError(f"Wystąpił nieoczekiwany błąd: {e}")
-# ================================================================================================================================
-def sent_to_controller(data):
+
+@app.post("/scrap_data")
+async def scrap_and_send():
     try:
-        url = "http://redis_controller:8000/test"
-        response = requests.post(url, json=data)
-        response.raise_for_status()
-        print("Dane zostały wysłane pomyślnie do serwisu redis_controller.")
+        result = await scrap_data()
+        for record in result:
+            url = "http://redis_controller:8000/electricity"
+            response = requests.post(url, json=record)
+            response.raise_for_status()            
+        return {"Zwrot": result}
     except requests.RequestException as e:
-        print(f"Błąd podczas wysyłania danych do serwisu redis_controller: {e}")
-
-
-#=========================
-@app.post("/testing")
-async def testing():
+        raise RuntimeError(f"Błąd podczas pobierania strony: {e}")
+    except Exception as e:
+        raise RuntimeError(f"Wystąpił nieoczekiwany błąd: {e}")
+        
+@app.get("/get_data")
+async def get_data():
     try:
-        payload = {"key": "123", "value":"asd"}
-        url = "http://redis_controller:8000/test"
-        response = requests.post(url, json=payload)
-        response.raise_for_status()
-        data = response.json()
-        return {"dane": data}
-    except requests.exceptions.RequestException as e:
-        print("Błąd podczas wysyłania żądania:", e)
+        result = await scrap_data()       
+        return {"Dane":result}  
+    except requests.RequestException as e:
+        raise RuntimeError(f"Błąd podczas pobierania strony: {e}")
+    except Exception as e:
+        raise RuntimeError(f"Wystąpił nieoczekiwany błąd: {e}")     
