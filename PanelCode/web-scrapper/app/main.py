@@ -1,18 +1,16 @@
 import asyncio
-import httpx  
-import asyncio
 import requests
 from bs4 import BeautifulSoup
 import re
 from fastapi import FastAPI
 from pydantic import BaseModel
-from fastapi_utilities import repeat_at, repeat_every
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from contextlib import asynccontextmanager
-
+import asyncio
 import json
-from datetime import datetime
+import redis.asyncio as redis
+import json
 
 
 # Tworzymy instancję FastAPI oraz schedulujemy cronjob do sprawdzania danych
@@ -20,7 +18,7 @@ from datetime import datetime
 async def lifespan(_:FastAPI):
     print('Webscrapper uruchomiony!')
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(id="job1",func=scrap_and_send,trigger=CronTrigger(second=0))
+    scheduler.add_job(id="job1",func=publish_data,trigger=CronTrigger(second=0))
     scheduler.start()
     yield
     scheduler.shutdown(wait=False)
@@ -96,3 +94,12 @@ async def get_data():
         raise RuntimeError(f"Błąd podczas pobierania strony: {e}")
     except Exception as e:
         raise RuntimeError(f"Wystąpił nieoczekiwany błąd: {e}")     
+    
+@app.post("/publish_post")
+async def publish_data():
+    result = await scrap_data()
+    for record in result:
+        message = json.dumps(record)
+        redis_client = redis.Redis(host="redis", port=6379, decode_responses=True)
+        await redis_client.publish("electricity_channel", message)
+    return {"status": "Wysłano dane do kanału Redis"}

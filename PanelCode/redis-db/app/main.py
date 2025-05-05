@@ -3,10 +3,36 @@ from pydantic import BaseModel
 from datetime import datetime
 import redis.asyncio as redis
 import json
-from typing import List
+from typing import Dict, List
 from fastapi import Query
+import asyncio
 
 
+class RedisSubscriber:
+    def __init__(self, redis_host="redis", redis_port=6379):
+        self.redis = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
+
+    async def listen(self):
+        pubsub = self.redis.pubsub()
+        await pubsub.subscribe("electricity_channel")
+
+        async for message in pubsub.listen():
+            if message["type"] != "message":
+                continue
+
+            try:
+                data = json.loads(message["data"])
+                today = datetime.now().strftime("%d.%m.%Y")
+                key = f"{data['FIRMA']}_{today}"
+
+                exists = await self.redis.exists(key)
+                if not exists:
+                    await self.redis.set(key, json.dumps(data))
+                    print(f"[INFO] Zapisano dane pod kluczem: {key}")
+                else:
+                    print(f"[INFO] Dane już istnieją dla klucza: {key}")
+            except Exception as e:
+                print(f"[ERROR] Błąd podczas przetwarzania wiadomości: {e}")
 app = FastAPI()
 
 # Inicjalizacja Redis
@@ -128,3 +154,31 @@ async def delete_all_data():
         return {"message": "Wszystkie dane zostały usunięte z Redis"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Błąd podczas usuwania danych: {e}")
+    
+    
+@app.on_event("startup")
+async def startup_event():
+    subscriber = RedisSubscriber()
+    asyncio.create_task(subscriber.listen())
+
+#================================================================================================================
+@app.get("/stream")
+async def read_stream(last_id: str = Query("0", description="ID od którego czytać, domyślnie od początku")):
+    """
+    Czyta dane ze strumienia Redis o nazwie `sensor_stream`.
+    Domyślnie odczytuje wszystko od początku (ID="0").
+    """
+
+    # Pobierz dane ze strumienia
+    response = await redis_client.xread({"sensor_stream": last_id}, count=50, block=1000)
+
+    # Konwersja na czytelny JSON
+    stream_data: List[Dict] = []
+    for stream_name, messages in response:
+        for message_id, fields in messages:
+            stream_data.append({
+                "id": message_id,
+                "data": fields
+            })
+
+    return {"entries": stream_data}

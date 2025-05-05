@@ -31,6 +31,16 @@ services:
     volumes:
       - ./redis-db/app:/app  # MOUNT kodu aplikacji do kontenera
 
+  sensor-query:
+    build: ./sensor-query
+    container_name: sensor_query
+    restart: always
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./sensor-query/app:/app/app  # montujemy kod aplikacji
+    depends_on:
+      - redis_controller
 
   web_scraper:
     build: ./web-scrapper
