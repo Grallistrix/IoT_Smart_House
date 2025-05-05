@@ -1,0 +1,17 @@
+redis_controller_url =      "http://redis_controller:8000"           "http://localhost:8000/docs" 
+sensor-query =              "http://sensor-query:8001"               "http://localhost:8001/docs"
+main-api =                  "http://main-api:8002"                   "http://localhost:8002/docs"
+web_scraper =               "http://web_scraper:8003"                "http://localhost:8003/docs"
+
+
+@app.post("/testing")
+async def testing():
+    try:
+        payload = {"key": "123", "value":"asd"}
+        url = "http://redis_controller:8000/test"
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        return {"dane": data}
+    except requests.exceptions.RequestException as e:
+        print("Błąd podczas wysyłania żądania:", e)

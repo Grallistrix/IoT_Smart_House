@@ -3,7 +3,7 @@ import asyncio
 import httpx
 from fastapi import FastAPI
 
-app = FastAPI()
+app = FastAPI(title="SensorQuery")
 
 CSV_PATH = "app/devices.csv"
 FETCH_INTERVAL = 10  # seconds
@@ -63,7 +63,6 @@ def get_latest_results():
 
 @app.get("/readings")
 def readings():
-    #print(sensor_data)
     return get_latest_results()
 
 @app.on_event("startup")

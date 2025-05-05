@@ -1,34 +1,18 @@
-FROM python:3.11-slim AS builder
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-RUN apt-get update
-RUN apt install -y gcc libpq-dev python3-dev build-essential libgomp1
+# Potrzebne biblioteki do buildowania zależności (np. psycopg2, numpy itp.)
+RUN apt-get update && \
+    apt-get install -y gcc libpq-dev python3-dev build-essential libgomp1 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-
-RUN pip install --upgrade pip
-COPY ./app/requirements.txt .
-RUN pip install  --no-cache-dir -r requirements.txt
-
-#===
-
-FROM builder
-
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-WORKDIR /z
-
-
+# Instalacja zależności
 WORKDIR /app
+COPY ./app/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app/requirements.txt requirements.txt
-
-RUN apt-get update
-RUN apt install -y gcc libpq-dev python3-dev build-essential libgomp1
-
-COPY app .
-
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-#CMD ["gunicorn", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "main:app", "--bind", "0.0.0.0:5000", "--timeout", "2137"]
+# Nie kopiujemy kodu - będzie mountowany
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

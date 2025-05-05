@@ -31,7 +31,7 @@ class SensorDataResponse(BaseModel):
     HumidityValue: str
     
     
-app = FastAPI()
+app = FastAPI(title="Gateway")
    
    
 @app.get("/test", status_code=204)

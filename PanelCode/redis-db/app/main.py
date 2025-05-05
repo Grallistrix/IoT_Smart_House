@@ -5,8 +5,12 @@ from redis_manager import RedisManager
 from pydantic import BaseModel
 from typing import List
 
-app = FastAPI()
+app = FastAPI(title="RedisControl")
 db = RedisManager()
+
+class TestData(BaseModel):
+    key: str
+    value: str
 
 class SensorData(BaseModel):
     sensor_number: int
@@ -56,7 +60,6 @@ async def get_sensor_data(sensor_number: int, date: str, time: str):
         raise HTTPException(status_code=404, detail="Sensor data not found")
     return data
 
-
 @app.get("/get_last_electricity_usage/{num_values}", response_model=List[ElectricityUsageResponse])
 async def get_last_electricity_usage(num_values: int):
     data = db.get_last_electricity_usage(num_values)
@@ -71,6 +74,7 @@ async def get_last_sensor_data(sensor_number: int, num_values: int):
         raise HTTPException(status_code=404, detail="No sensor data found")
     return data
 
+#=========================================================================================================
 @app.post("/electricity")
 async def store_data(data: ElectricityData):
     try:
@@ -95,3 +99,12 @@ async def add_electricity_usage(data: ElectricityData):
         return {"message": "Electricity usage data added successfully"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+#=========================================================
+@app.post("/test")
+async def test(data: TestData):
+    try:
+        return {"message": "TEST SUCCESSFUL"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+

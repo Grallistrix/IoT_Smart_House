@@ -24,5 +24,5 @@ purge:
 	docker stop $$(docker ps -aq) || true
 	docker rm $$(docker ps -aq) || true
 	docker rmi $$(docker images -q) || true
-	docker volume rm $$(docker volume ls -q) || true
-	docker network prune -f || true
+#	docker volume rm $$(docker volume ls -q) || true
+#	docker network prune -f || true

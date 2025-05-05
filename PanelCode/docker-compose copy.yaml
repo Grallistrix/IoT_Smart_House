@@ -19,7 +19,7 @@ services:
       - "6379:6379"
 
   redis_controller:
-    build: ./redis-db
+    build: redis-db/.
     container_name: redis_controller
     restart: always
     ports:
@@ -28,9 +28,28 @@ services:
       - redis
     environment:
       - REDIS_HOST=redis
-    volumes:
-      - ./redis-db/app:/app  # MOUNT kodu aplikacji do kontenera
 
+  sensor-query:
+    build: ./sensor-query
+    container_name: sensor_query
+    restart: always
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./sensor-query/app:/app/app
+    depends_on:
+      - redis_controller
+
+  main-api:
+    build: ./main-api
+    container_name: main-api
+    restart: always
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./main-api/app:/app/app
+    depends_on:
+      - redis_controller
 
   web_scraper:
     build: ./web-scrapper
@@ -42,5 +61,3 @@ services:
       - redis_controller
     environment:
       - REDIS_CONTROLLER_URL=http://redis-controller:8000/electricity
-    volumes:
-      - ./web-scrapper/app:/app/app  # MOUNT kodu aplikacji
