@@ -16,7 +16,6 @@ import json
 # Tworzymy instancję FastAPI oraz schedulujemy cronjob do sprawdzania danych
 @asynccontextmanager
 async def lifespan(_:FastAPI):
-    print('Webscrapper uruchomiony!')
     scheduler = AsyncIOScheduler()
     scheduler.add_job(id="job1",func=publish_data,trigger=CronTrigger(second=0))
     scheduler.start()

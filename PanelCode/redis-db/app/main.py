@@ -8,31 +8,52 @@ from fastapi import Query
 import asyncio
 
 
+import redis.asyncio as redis
+import json
+from datetime import datetime
+
 class RedisSubscriber:
     def __init__(self, redis_host="redis", redis_port=6379):
         self.redis = redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
 
     async def listen(self):
         pubsub = self.redis.pubsub()
-        await pubsub.subscribe("electricity_channel")
+        await pubsub.subscribe("electricity_channel", "sensor_channel")
 
         async for message in pubsub.listen():
             if message["type"] != "message":
                 continue
 
+            channel = message["channel"]
             try:
                 data = json.loads(message["data"])
-                today = datetime.now().strftime("%d.%m.%Y")
-                key = f"{data['FIRMA']}_{today}"
+                now = datetime.now()
 
-                exists = await self.redis.exists(key)
-                if not exists:
+                if channel == "electricity_channel":
+                    today = now.strftime("%d.%m.%Y")
+                    key = f"{data['FIRMA']}_{today}"
+
+                    exists = await self.redis.exists(key)
+                    if not exists:
+                        await self.redis.set(key, json.dumps(data))
+                        print(f"[INFO] [electricity] Zapisano dane pod kluczem: {key}")
+                    else:
+                        print(f"[INFO] [electricity] Dane już istnieją dla klucza: {key}")
+
+                elif channel == "sensor_channel":
+                    timestamp = datetime.now().strftime("%d.%m.%y.%H:%M.%S")
+                    sensor_id = data.get("sensor_id")
+
+                    key = f"SENSOR_{sensor_id}_{timestamp}"
                     await self.redis.set(key, json.dumps(data))
-                    print(f"[INFO] Zapisano dane pod kluczem: {key}")
-                else:
-                    print(f"[INFO] Dane już istnieją dla klucza: {key}")
+                    print(f"[INFO] [sensor] Zapisano dane pod kluczem: {key}")
+
             except Exception as e:
-                print(f"[ERROR] Błąd podczas przetwarzania wiadomości: {e}")
+                print(f"[ERROR] [{channel}] Błąd podczas przetwarzania wiadomości: {e}")
+
+                
+                
+                
 app = FastAPI()
 
 # Inicjalizacja Redis
@@ -96,19 +117,21 @@ async def get_data_by_date(day: str = Query(..., regex=r"^\d{2}\.\d{2}\.\d{4}$")
         raise HTTPException(status_code=500, detail=f"Błąd pobierania danych: {e}")
 
 #===========================================================================
+from datetime import timedelta
+
+
 class SensorPayload(BaseModel):
     sensor_id: str
     temperature: float
     humidity: float
     
-from datetime import timedelta
 
 
 @app.post("/sensor")
 async def store_sensor_data(data: SensorPayload):
     try:
         # Utwórz znacznik czasu w formacie DD.MM.YY.HH:MM
-        timestamp = datetime.now().strftime("%d.%m.%y.%H:%M")
+        timestamp = datetime.now().strftime("%d.%m.%y.%H:%M.%S")
 
         # Klucz Redis: SENSOR_<ID>_MDD.MM.YY.HH:MM
         key = f"SENSOR_{data.sensor_id}_{timestamp}"
@@ -147,7 +170,7 @@ async def get_sensor_values(sensor_id: str, count: int = 10):
         raise HTTPException(status_code=500, detail=f"Błąd pobierania danych: {e}")
     
 #==================================================================================================================================
-@app.post("/delete")
+@app.delete("/delete")
 async def delete_all_data():
     try:
         await redis_client.flushdb()
@@ -164,10 +187,6 @@ async def startup_event():
 #================================================================================================================
 @app.get("/stream")
 async def read_stream(last_id: str = Query("0", description="ID od którego czytać, domyślnie od początku")):
-    """
-    Czyta dane ze strumienia Redis o nazwie `sensor_stream`.
-    Domyślnie odczytuje wszystko od początku (ID="0").
-    """
 
     # Pobierz dane ze strumienia
     response = await redis_client.xread({"sensor_stream": last_id}, count=50, block=1000)
