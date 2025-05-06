@@ -94,7 +94,7 @@ async def get_data():
     except Exception as e:
         raise RuntimeError(f"Wystąpił nieoczekiwany błąd: {e}")     
     
-@app.post("/publish_post")
+@app.put("/publish_post")
 async def publish_data():
     result = await scrap_data()
     for record in result:

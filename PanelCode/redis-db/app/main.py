@@ -18,7 +18,7 @@ class RedisSubscriber:
 
     async def listen(self):
         pubsub = self.redis.pubsub()
-        await pubsub.subscribe("electricity_channel", "sensor_channel")
+        await pubsub.subscribe("electricity_channel")
 
         async for message in pubsub.listen():
             if message["type"] != "message":
@@ -40,13 +40,6 @@ class RedisSubscriber:
                     else:
                         print(f"[INFO] [electricity] Dane już istnieją dla klucza: {key}")
 
-                elif channel == "sensor_channel":
-                    timestamp = datetime.now().strftime("%d.%m.%y.%H:%M.%S")
-                    sensor_id = data.get("sensor_id")
-
-                    key = f"SENSOR_{sensor_id}_{timestamp}"
-                    await self.redis.set(key, json.dumps(data))
-                    print(f"[INFO] [sensor] Zapisano dane pod kluczem: {key}")
 
             except Exception as e:
                 print(f"[ERROR] [{channel}] Błąd podczas przetwarzania wiadomości: {e}")

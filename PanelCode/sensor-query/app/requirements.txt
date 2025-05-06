@@ -4,3 +4,4 @@ uvicorn
 pydantic
 APScheduler
 redis
+aiohttp
