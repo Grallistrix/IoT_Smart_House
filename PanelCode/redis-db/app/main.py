@@ -1,16 +1,18 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from datetime import datetime
 import redis.asyncio as redis
 import json
 from typing import Dict, List
-from fastapi import Query
+from fastapi import Query, Request
 import asyncio
-
 
 import redis.asyncio as redis
 import json
 from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
+
+
 
 class RedisSubscriber:
     def __init__(self, redis_host="redis", redis_port=6379):
@@ -48,7 +50,15 @@ class RedisSubscriber:
                 
                 
 app = FastAPI()
+origins = ["*"]
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 # Inicjalizacja Redis
 redis_client = redis.Redis(host="redis", port=6379, decode_responses=True)
 
@@ -83,8 +93,6 @@ async def store_electricity_data(data: ElectricityPayload):
         raise HTTPException(status_code=500, detail=f"Błąd zapisu danych: {e}")
     
     
-
-
 @app.get("/electricity/date")
 async def get_data_by_date(day: str = Query(..., regex=r"^\d{2}\.\d{2}\.\d{4}$")):
     try:
@@ -119,6 +127,15 @@ class SensorPayload(BaseModel):
     humidity: float
     
 
+
+@app.get("/ping")
+async def ping():
+    try:
+
+        return {"message": f"Server is online"}
+
+    except Exception as e:
+        raise HTTPException("Err")
 
 @app.post("/sensor")
 async def store_sensor_data(data: SensorPayload):
@@ -194,3 +211,18 @@ async def read_stream(last_id: str = Query("0", description="ID od którego czyt
             })
 
     return {"entries": stream_data}
+
+#================================================================================================================
+
+
+@app.get("/login")
+async def login(request: Request):
+    try:
+        
+        username = request.headers.get('Authorization').split(' ')[0]
+        password = request.headers.get('Authorization').split(' ')[1]
+        assert await redis_client.lpos("users", password) is not None, 'Invalid credentials'
+        return {f"Ur login: {username}, ur password: {password}"}
+    
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"ERR: {e}")

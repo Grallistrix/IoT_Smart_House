@@ -54,3 +54,14 @@ services:
       - REDIS_CONTROLLER_URL=http://redis-controller:8000/electricity
     volumes:
       - ./web-scrapper/app:/app/app  # MOUNT kodu aplikacji
+
+  main-api:
+    build: ./main-api
+    container_name: main-api
+    restart: always
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./main-api/app:/app/app
+    depends_on:
+      - redis_controller
