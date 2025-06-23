@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "three": "^0.177.0",
+    "three-stdlib": "^2.36.0"
+  }
+}

@@ -180,6 +180,35 @@ async def get_sensor_values(sensor_id: str, count: int = 10):
         raise HTTPException(status_code=500, detail=f"Błąd pobierania danych: {e}")
     
 #==================================================================================================================================
+@app.get("/new_sensor/{sensor_id}/values")
+async def get_sensor_values( sensor_id: str, count: int):
+    try:
+        # Pobierz ostatnie wpisy w streamie (maksymalnie 1000 do przeszukania)
+        entries = await redis_client.xrevrange("sensor_stream", max="+", min="-", count=1000)
+
+        sensor_values = []
+        for message_id, fields in entries:
+            if fields.get("sensor_id") == sensor_id:
+                sensor_values.append({
+                    "sensor_id": sensor_id,
+                    "temperature": fields.get("temperature"),
+                    "humidity": fields.get("humidity")
+                })
+                if len(sensor_values) >= count:
+                    break
+
+        # Odwracamy, by były w kolejności rosnącej czasu (najstarsze -> najnowsze)
+        sensor_values.reverse()
+
+        return {
+            "sensor_id": sensor_id,
+            "count": len(sensor_values),
+            "values": sensor_values
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Błąd pobierania danych: {e}")
+#===
 @app.delete("/delete")
 async def delete_all_data():
     try:

@@ -33,7 +33,7 @@ redis_client = redis.Redis(host="redis", port=6379, decode_responses=True)
 
 
 async def zapytaj_sensor(sensor_id: str):
-    url = f"http://192.168.11.17/stats"
+    url = f"http://192.168.196.17/stats"
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             text = await response.text()
@@ -51,19 +51,6 @@ async def zapytaj_sensor(sensor_id: str):
                 "temperature": temperature,
                 "humidity": humidity
             }
-
-async def query_mock2(sensor_id: int):
-    """
-    Mock funkcja zwracająca dane z czujnika na podstawie ID.
-    """    
-    temperature = round(random.uniform(15, 26), 1)  # Zakres 15.0–26.0
-    humidity = round(random.uniform(35, 65), 1)     # Zakres 35.0–65.0
-    
-    return {
-            "sensor_id": sensor_id,
-            "temperature": f"{temperature}",
-            "humidity": f"{humidity}"
-    }
 
 @app.get("/{sensor_id}/channel")
 async def get_sensor_data(sensor_id: int):
